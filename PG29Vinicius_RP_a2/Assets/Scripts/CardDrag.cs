@@ -1,24 +1,25 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class CardDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private CardUI cardUI;
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
-    private GraphicRaycaster graphicRaycaster;
+    private Canvas rootCanvas;
 
+    private Transform originalParent;
     private Vector2 originalAnchoredPosition;
     private bool isDragging = false;
     private CardSlot hoveredSlot;
-    private int originalSortingOrder;
+    private Vector2 dragStartPosition;
 
     private void Awake()
     {
         cardUI = GetComponent<CardUI>();
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        rootCanvas = GetComponentInParent<Canvas>();
 
         if (canvasGroup == null)
         {
@@ -31,14 +32,16 @@ public class CardDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
         Debug.Log($"BEGIN DRAG: {cardUI.GetCardData().cardName}");
 
         isDragging = true;
-        originalAnchoredPosition = rectTransform.anchoredPosition;
 
-        // Store original sorting order and set to high value to appear on top
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas != null)
+        // Store original parent and position
+        originalParent = transform.parent;
+        originalAnchoredPosition = rectTransform.anchoredPosition;
+        dragStartPosition = rectTransform.anchoredPosition;
+
+        // Move to root canvas to appear on top, keeping world position
+        if (rootCanvas != null)
         {
-            originalSortingOrder = canvas.sortingOrder;
-            canvas.sortingOrder = 100; // High value to appear on top
+            transform.SetParent(rootCanvas.transform, worldPositionStays: true);
         }
 
         if (canvasGroup != null)
@@ -59,13 +62,6 @@ public class CardDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
     {
         Debug.Log("END DRAG");
         isDragging = false;
-
-        // Reset sorting order
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas != null)
-        {
-            canvas.sortingOrder = originalSortingOrder;
-        }
 
         if (canvasGroup != null)
         {
@@ -137,6 +133,8 @@ public class CardDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
 
     private void ResetPosition()
     {
+        // Return to original parent, keeping world position stays true for proper conversion
+        transform.SetParent(originalParent, worldPositionStays: true);
         rectTransform.anchoredPosition = originalAnchoredPosition;
     }
 }
